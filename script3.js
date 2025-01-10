@@ -4,17 +4,24 @@
     const labelBox = document.getElementById('label-box');
     const ctx = canvas.getContext('2d');
 
-    // Initialize the camera
+    // Initialize the camera with constraints
     const startCamera = async () => {
-        video.srcObject = await navigator.mediaDevices.getUserMedia({ video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+                facingMode: 'environment',  // Use the back camera
+                width: { ideal: 640 },      // Reduce resolution (adjust as needed)
+                height: { ideal: 480 }
+            }
+        });
+        video.srcObject = stream;
         await new Promise(resolve => (video.onloadedmetadata = resolve));
         video.play();
     };
 
     // Run detection loop
     const detectObjects = async model => {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+        canvas.width = 640;  // Set canvas size to match reduced resolution
+        canvas.height = 480;
 
         while (true) {
             const predictions = await model.detect(video);
