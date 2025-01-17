@@ -28,6 +28,21 @@
         video.play();
     };
 
+    // Function to determine the direction based on x-coordinate
+    const getDirection = (x, width) => {
+        const centerX = width / 2;
+        const leftThreshold = centerX / 2;
+        const rightThreshold = centerX + (centerX / 2);
+
+        if (x < leftThreshold) {
+            return 'left';
+        } else if (x > rightThreshold) {
+            return 'right';
+        } else {
+            return 'center';
+        }
+    };
+
     // Run detection loop
     const detectObjects = async model => {
         canvas.width = video.videoWidth; // Use video width for canvas
@@ -36,8 +51,6 @@
         // Scale factors to adjust bounding box position/size
         const scaleX = canvas.width / video.videoWidth;
         const scaleY = canvas.height / video.videoHeight;
-
-        const videoCenterX = canvas.width / 2; // Center of the video frame
 
         while (true) {
             const predictions = await model.detect(video);
@@ -56,23 +69,20 @@
                 const scaledWidth = width * scaleX;
                 const scaledHeight = height * scaleY;
 
-                // Calculate the center of the bounding box
-                const centerX = scaledX + scaledWidth / 2;
-
                 // Determine the direction (left, center, or right)
-                let direction = 'Center'; // Default direction is center
-                if (centerX < videoCenterX - 100) { // 100px threshold for "left"
-                    direction = 'Left';
-                } else if (centerX > videoCenterX + 100) { // 100px threshold for "right"
-                    direction = 'Right';
-                }
+                const direction = getDirection(scaledX + scaledWidth / 2, canvas.width);
 
                 ctx.strokeStyle = 'red';
                 ctx.lineWidth = 2;
                 ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight); // Bounding box
                 ctx.fillStyle = 'red';
                 ctx.font = '16px Arial';
-                ctx.fillText(`${pred.class} (${Math.round(pred.score * 100)}%) - ${direction}`, scaledX, scaledY - 5); // Label with direction
+                ctx.fillText(`${pred.class} (${Math.round(pred.score * 100)}%)`, scaledX, scaledY - 5); // Label
+
+                // Send direction message to MIT App Inventor
+                if (window.AppInventor) {
+                    window.AppInventor.setWebViewString(`Detected: ${pred.class} at ${direction}`);
+                }
 
                 // Return the corresponding number if the object is mapped
                 return objectMapping[pred.class] || null;
@@ -80,11 +90,6 @@
 
             // Update the label box
             labelBox.textContent = detectedNumbers.length ? `Detected: ${detectedNumbers.join(', ')}` : 'No relevant objects detected';
-
-            // Send detected numbers to MIT App Inventor
-            if (window.AppInventor) {
-                window.AppInventor.setWebViewString(detectedNumbers.join(', '));
-            }
 
             await tf.nextFrame(); // Wait for the next animation frame
         }
