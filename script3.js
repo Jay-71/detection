@@ -66,7 +66,9 @@
 
             // Update the label box with detected objects
             labelBox.textContent = detected.length ? `Detected: ${detected.join(', ')}` : 'No objects detected';
-
+  if (window.AppInventor) {
+                window.AppInventor.setWebViewString(detected.join(', '));
+            }
             await tf.nextFrame(); // Wait for the next animation frame
         }
     };
