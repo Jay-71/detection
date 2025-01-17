@@ -19,7 +19,7 @@
         const stream = await navigator.mediaDevices.getUserMedia({
             video: { 
                 facingMode: 'environment',  // Use the back camera
-                width: { ideal: 640 },      // Reduce resolution (adjust as needed)
+                width: { ideal: 640 },      // Adjust resolution
                 height: { ideal: 480 }
             }
         });
@@ -30,8 +30,12 @@
 
     // Run detection loop
     const detectObjects = async model => {
-        canvas.width = 640;  // Set canvas size to match reduced resolution
-        canvas.height = 480;
+        canvas.width = video.videoWidth; // Use video width for canvas
+        canvas.height = video.videoHeight; // Use video height for canvas
+
+        // Scale factors to adjust bounding box position/size
+        const scaleX = canvas.width / video.videoWidth;
+        const scaleY = canvas.height / video.videoHeight;
 
         while (true) {
             const predictions = await model.detect(video);
@@ -43,12 +47,19 @@
             // Draw bounding boxes and labels
             const detectedNumbers = predictions.map(pred => {
                 const [x, y, width, height] = pred.bbox;
+
+                // Scale bounding box coordinates
+                const scaledX = x * scaleX;
+                const scaledY = y * scaleY;
+                const scaledWidth = width * scaleX;
+                const scaledHeight = height * scaleY;
+
                 ctx.strokeStyle = 'red';
                 ctx.lineWidth = 2;
-                ctx.strokeRect(x, y, width, height); // Bounding box
+                ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight); // Bounding box
                 ctx.fillStyle = 'red';
                 ctx.font = '16px Arial';
-                ctx.fillText(`${pred.class} (${Math.round(pred.score * 100)}%)`, x, y - 5); // Label
+                ctx.fillText(`${pred.class} (${Math.round(pred.score * 100)}%)`, scaledX, scaledY - 5); // Label
 
                 // Return the corresponding number if the object is mapped
                 return objectMapping[pred.class] || null;
