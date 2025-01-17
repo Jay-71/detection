@@ -37,6 +37,8 @@
         const scaleX = canvas.width / video.videoWidth;
         const scaleY = canvas.height / video.videoHeight;
 
+        const videoCenterX = canvas.width / 2; // Center of the video frame
+
         while (true) {
             const predictions = await model.detect(video);
 
@@ -54,12 +56,23 @@
                 const scaledWidth = width * scaleX;
                 const scaledHeight = height * scaleY;
 
+                // Calculate the center of the bounding box
+                const centerX = scaledX + scaledWidth / 2;
+
+                // Determine the direction (left, center, or right)
+                let direction = 'Center'; // Default direction is center
+                if (centerX < videoCenterX - 100) { // 100px threshold for "left"
+                    direction = 'Left';
+                } else if (centerX > videoCenterX + 100) { // 100px threshold for "right"
+                    direction = 'Right';
+                }
+
                 ctx.strokeStyle = 'red';
                 ctx.lineWidth = 2;
                 ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight); // Bounding box
                 ctx.fillStyle = 'red';
                 ctx.font = '16px Arial';
-                ctx.fillText(`${pred.class} (${Math.round(pred.score * 100)}%)`, scaledX, scaledY - 5); // Label
+                ctx.fillText(`${pred.class} (${Math.round(pred.score * 100)}%) - ${direction}`, scaledX, scaledY - 5); // Label with direction
 
                 // Return the corresponding number if the object is mapped
                 return objectMapping[pred.class] || null;
