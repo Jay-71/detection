@@ -79,13 +79,21 @@
                 ctx.font = '16px Arial';
                 ctx.fillText(`${pred.class} (${Math.round(pred.score * 100)}%)`, scaledX, scaledY - 5); // Label
 
-                // Send direction message to MIT App Inventor
-                if (window.AppInventor) {
-                    window.AppInventor.setWebViewString(`Detected: ${pred.class} at ${direction}`);
+                // Return the corresponding number if the object is mapped
+                const objectNumber = objectMapping[pred.class] || null;
+                
+                if (objectNumber !== null) {
+                    const message = `Detected: ${pred.class} (${objectNumber}) at ${direction}`;
+                    
+                    // Send the direction and object information to MIT App Inventor
+                    if (window.AppInventor) {
+                        window.AppInventor.setWebViewString(message); // Send detailed message to MIT App Inventor
+                    }
+
+                    return objectNumber;
                 }
 
-                // Return the corresponding number if the object is mapped
-                return objectMapping[pred.class] || null;
+                return null;
             }).filter(number => number !== null); // Remove unmapped objects
 
             // Update the label box
