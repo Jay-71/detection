@@ -61,9 +61,8 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear previous frame
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height); // Draw live video
 
-            // Group detections by object type
-            const groupedMessages = {};
-            predictions.forEach((pred) => {
+            // Collect all messages as individual strings
+            const detectedMessages = predictions.map((pred) => {
                 const [x, y, width, height] = pred.bbox;
 
                 // Scale bounding box coordinates
@@ -86,24 +85,19 @@
                 // Get the object number
                 const objectNumber = objectMapping[pred.class] || null;
 
-                if (objectNumber !== null) {
-                    // Add direction code to grouped messages
-                    if (!groupedMessages[objectNumber]) {
-                        groupedMessages[objectNumber] = `${objectNumber}`;
-                    }
-                    groupedMessages[objectNumber] += directionCode;
-                }
-            });
+                // Return the message in the format "<objectNumber><directionCode>"
+                return objectNumber !== null ? `${objectNumber}${directionCode}` : null;
+            }).filter((message) => message !== null); // Remove null messages
 
-            // Combine all grouped messages into a single string
-            const combinedMessage = Object.values(groupedMessages).join('');
+            // Combine all messages into a single string
+            const combinedMessage = detectedMessages.join('');
 
             // Update the label box
             labelBox.textContent = combinedMessage ? `Detected: ${combinedMessage}` : 'No relevant objects detected';
 
             // Send the combined message to MIT App Inventor
             if (window.AppInventor) {
-                window.AppInventor.setWebViewString(combinedMessage); // Send grouped message
+                window.AppInventor.setWebViewString(combinedMessage); // Send all messages at once
             }
 
             await tf.nextFrame(); // Wait for the next animation frame
