@@ -4,7 +4,6 @@
     const labelBox = document.getElementById('label-box');
     const ctx = canvas.getContext('2d');
 
-    // Map specific objects to corresponding numbers
     const objectMapping = {
         person: 1,
         car: 2,
@@ -13,98 +12,61 @@
         traffic_light: 5,
         stop_sign: 6,
         motorcycle: 7,
-        truck: 8
+        truck: 8,
     };
 
-    // Initialize the camera with constraints
+    // Start the camera
     const startCamera = async () => {
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-                facingMode: 'environment', // Use the back camera
-                width: { ideal: 640 }, // Adjust resolution
-                height: { ideal: 480 }
-            }
+            video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } },
         });
         video.srcObject = stream;
         await new Promise((resolve) => (video.onloadedmetadata = resolve));
         video.play();
     };
 
-    // Function to determine the direction based on x-coordinate
-    const getDirectionCode = (x, width) => {
-        const centerX = width / 2;
-        const leftThreshold = centerX / 2;
-        const rightThreshold = centerX + centerX / 2;
+    // Determine direction based on x-coordinate
+    const getDirectionCode = (x, width) => (x < width / 3 ? 1 : x > (2 * width) / 3 ? 3 : 2);
 
-        if (x < leftThreshold) {
-            return 1; // Left
-        } else if (x > rightThreshold) {
-            return 3; // Right
-        } else {
-            return 2; // Center
-        }
-    };
-
-    // Run detection loop
+    // Main detection loop
     const detectObjects = async (model) => {
-        canvas.width = video.videoWidth; // Use video width for canvas
-        canvas.height = video.videoHeight; // Use video height for canvas
-
-        // Scale factors to adjust bounding box position/size
-        const scaleX = canvas.width / video.videoWidth;
-        const scaleY = canvas.height / video.videoHeight;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
 
         while (true) {
             const predictions = await model.detect(video);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            // Draw the current video frame
-            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear previous frame
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height); // Draw live video
+            const result = predictions
+                .map((pred) => {
+                    const [x, y, width, height] = pred.bbox;
+                    const objectNumber = objectMapping[pred.class];
+                    const directionCode = getDirectionCode(x + width / 2, canvas.width);
 
-            // Collect all messages as individual strings
-            const detectedMessages = predictions.map((pred) => {
-                const [x, y, width, height] = pred.bbox;
+                    // Draw bounding box and label
+                    ctx.strokeStyle = 'red';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, width, height);
+                    ctx.fillStyle = 'red';
+                    ctx.font = '16px Arial';
+                    ctx.fillText(`${pred.class} (${Math.round(pred.score * 100)}%)`, x, y - 5);
 
-                // Scale bounding box coordinates
-                const scaledX = x * scaleX;
-                const scaledY = y * scaleY;
-                const scaledWidth = width * scaleX;
-                const scaledHeight = height * scaleY;
+                    return objectNumber ? `${objectNumber}${directionCode}` : null;
+                })
+                .filter((item) => item)
+                .join('');
 
-                // Determine the direction code
-                const directionCode = getDirectionCode(scaledX + scaledWidth / 2, canvas.width);
+            labelBox.textContent = result || 'No relevant objects detected';
 
-                // Draw bounding boxes and labels
-                ctx.strokeStyle = 'red';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight); // Bounding box
-                ctx.fillStyle = 'red';
-                ctx.font = '16px Arial';
-                ctx.fillText(`${pred.class} (${Math.round(pred.score * 100)}%)`, scaledX, scaledY - 5); // Label
-
-                // Get the object number
-                const objectNumber = objectMapping[pred.class] || null;
-
-                // Return the message in the format "<objectNumber><directionCode>"
-                return objectNumber !== null ? `${objectNumber}${directionCode}` : null;
-            }).filter((message) => message !== null); // Remove null messages
-
-            // Combine all messages into a single string
-            const combinedMessage = detectedMessages.join('');
-
-            // Update the label box
-            labelBox.textContent = combinedMessage ? `Detected: ${combinedMessage}` : 'No relevant objects detected';
-
-            // Send the combined message to MIT App Inventor
             if (window.AppInventor) {
-                window.AppInventor.setWebViewString(combinedMessage); // Send all messages at once
+                window.AppInventor.setWebViewString(result);
             }
 
-            await tf.nextFrame(); // Wait for the next animation frame
+            await tf.nextFrame();
         }
     };
 
-    // Load the model and start detection
     await startCamera();
     const model = await cocoSsd.load();
     detectObjects(model);
