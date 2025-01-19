@@ -61,8 +61,9 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear previous frame
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height); // Draw live video
 
-            // Collect messages for all detected objects
-            const detectedMessages = predictions.map((pred) => {
+            // Group detections by object type
+            const groupedMessages = {};
+            predictions.forEach((pred) => {
                 const [x, y, width, height] = pred.bbox;
 
                 // Scale bounding box coordinates
@@ -74,6 +75,7 @@
                 // Determine the direction code
                 const directionCode = getDirectionCode(scaledX + scaledWidth / 2, canvas.width);
 
+                // Draw bounding boxes and labels
                 ctx.strokeStyle = 'red';
                 ctx.lineWidth = 2;
                 ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight); // Bounding box
@@ -84,19 +86,24 @@
                 // Get the object number
                 const objectNumber = objectMapping[pred.class] || null;
 
-                // Return combined message (e.g., "11", "22")
-                return objectNumber !== null ? `${objectNumber}${directionCode}` : null;
-            }).filter((message) => message !== null); // Remove null messages
+                if (objectNumber !== null) {
+                    // Add direction code to grouped messages
+                    if (!groupedMessages[objectNumber]) {
+                        groupedMessages[objectNumber] = `${objectNumber}`;
+                    }
+                    groupedMessages[objectNumber] += directionCode;
+                }
+            });
 
-            // Combine all messages into a single string
-            const combinedMessage = detectedMessages.join(', ');
+            // Combine all grouped messages into a single string
+            const combinedMessage = Object.values(groupedMessages).join('');
 
             // Update the label box
-            labelBox.textContent = detectedMessages.length ? `Detected: ${combinedMessage}` : 'No relevant objects detected';
+            labelBox.textContent = combinedMessage ? `Detected: ${combinedMessage}` : 'No relevant objects detected';
 
             // Send the combined message to MIT App Inventor
             if (window.AppInventor) {
-                window.AppInventor.setWebViewString(combinedMessage); // Send all messages at once
+                window.AppInventor.setWebViewString(combinedMessage); // Send grouped message
             }
 
             await tf.nextFrame(); // Wait for the next animation frame
