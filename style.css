@@ -6,10 +6,10 @@ body {
     background-color: #f4f4f9;
 }
 
-h1 {
+/* h1 {
     margin: 20px 0;
     color: #333;
-}
+} */
 
 video, canvas {
     display: block;
