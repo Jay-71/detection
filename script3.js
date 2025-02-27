@@ -4,17 +4,6 @@
     const labelBox = document.getElementById('label-box');
     const ctx = canvas.getContext('2d');
 
-    const objectMapping = {
-        person: 1,
-        car: 2,
-        bicycle: 3,
-        bus: 4,
-        traffic_light: 5,
-        stop_sign: 6,
-        motorcycle: 7,
-        truck: 8,
-    };
-
     // Start the camera
     const startCamera = async () => {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -38,29 +27,25 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            const result = predictions
-                .map((pred) => {
-                    const [x, y, width, height] = pred.bbox;
-                    const objectNumber = objectMapping[pred.class];
-                    const directionCode = getDirectionCode(x + width / 2, canvas.width);
+            let directionCode = 0; // Default value if no object is detected
 
-                    // Draw bounding box and label
-                    ctx.strokeStyle = 'red';
-                    ctx.lineWidth = 2;
-                    ctx.strokeRect(x, y, width, height);
-                    ctx.fillStyle = 'red';
-                    ctx.font = '16px Arial';
-                    ctx.fillText(`${pred.class} (${Math.round(pred.score * 100)}%)`, x, y - 5);
+            predictions.forEach((pred) => {
+                const [x, y, width, height] = pred.bbox;
+                directionCode = getDirectionCode(x + width / 2, canvas.width); // Determine direction
 
-                    return objectNumber ? `${objectNumber}${directionCode}` : null;
-                })
-                .filter((item) => item)
-                .join('');
+                // Draw bounding box and label
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y, width, height);
+                ctx.fillStyle = 'red';
+                ctx.font = '16px Arial';
+                ctx.fillText(`Dir: ${directionCode}`, x, y - 5);
+            });
 
-            labelBox.textContent = result || 'No relevant objects detected';
+            labelBox.textContent = `Direction: ${directionCode}`;
 
             if (window.AppInventor) {
-                window.AppInventor.setWebViewString(result);
+                window.AppInventor.setWebViewString(directionCode.toString());
             }
 
             await tf.nextFrame();
