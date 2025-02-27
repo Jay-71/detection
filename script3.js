@@ -4,6 +4,9 @@
     const labelBox = document.getElementById('label-box');
     const ctx = canvas.getContext('2d');
 
+    // List of objects to detect
+    const allowedObjects = ['person', 'car', 'bicycle', 'bus', 'traffic light', 'stop sign', 'motorcycle', 'truck'];
+
     // Start the camera
     const startCamera = async () => {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -27,22 +30,24 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            let directionCode = 0; // Default value if no object is detected
+            let directionCode = 0; // Default value if no relevant object is detected
 
             predictions.forEach((pred) => {
-                const [x, y, width, height] = pred.bbox;
-                directionCode = getDirectionCode(x + width / 2, canvas.width); // Determine direction
+                if (allowedObjects.includes(pred.class)) {
+                    const [x, y, width, height] = pred.bbox;
+                    directionCode = getDirectionCode(x + width / 2, canvas.width); // Determine direction
 
-                // Draw bounding box and label
-                ctx.strokeStyle = 'red';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(x, y, width, height);
-                ctx.fillStyle = 'red';
-                ctx.font = '16px Arial';
-                ctx.fillText(`Dir: ${directionCode}`, x, y - 5);
+                    // Draw bounding box and label
+                    ctx.strokeStyle = 'red';
+                    ctx.lineWidth = 2;
+                    ctx.strokeRect(x, y, width, height);
+                    ctx.fillStyle = 'red';
+                    ctx.font = '16px Arial';
+                    ctx.fillText(`Dir: ${directionCode}`, x, y - 5);
+                }
             });
 
-            labelBox.textContent = `Direction: ${directionCode}`;
+            labelBox.textContent = directionCode ? `Direction: ${directionCode}` : 'No relevant objects detected';
 
             if (window.AppInventor) {
                 window.AppInventor.setWebViewString(directionCode.toString());
