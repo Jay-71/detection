@@ -47,7 +47,7 @@
                 }
             });
 
-            labelBox.textContent = directionCode ? `${directionCode}` : 'No relevant objects detected';
+            labelBox.textContent = directionCode ? `${directionCode}` : 'No relevant object detected';
 
             if (window.AppInventor) {
                 window.AppInventor.setWebViewString(directionCode.toString());
