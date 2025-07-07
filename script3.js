@@ -4,8 +4,8 @@
     const labelBox = document.getElementById('label-box');
     const ctx = canvas.getContext('2d');
 
-    // List of objects to detect
-    const allowedObjects = ['person', 'car', 'bicycle', 'bus', 'traffic light', 'stop sign', 'motorcycle', 'truck'];
+    // Only detect 'person'
+    const targetObject = 'person';
 
     // Start the camera
     const startCamera = async () => {
@@ -17,9 +17,6 @@
         video.play();
     };
 
-    // Determine direction based on x-coordinate
-    const getDirectionCode = (x, width) => (x < width / 3 ? 1 : x > (2 * width) / 3 ? 3 : 2);
-
     // Main detection loop
     const detectObjects = async (model) => {
         canvas.width = video.videoWidth;
@@ -30,12 +27,12 @@
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-            let directionCode = 0; // Default value if no relevant object is detected
+            let personDetected = false;
 
             predictions.forEach((pred) => {
-                if (allowedObjects.includes(pred.class)) {
+                if (pred.class === targetObject) {
+                    personDetected = true;
                     const [x, y, width, height] = pred.bbox;
-                    directionCode = getDirectionCode(x + width / 2, canvas.width); // Determine direction
 
                     // Draw bounding box and label
                     ctx.strokeStyle = 'red';
@@ -43,14 +40,15 @@
                     ctx.strokeRect(x, y, width, height);
                     ctx.fillStyle = 'red';
                     ctx.font = '16px Arial';
-                    ctx.fillText(`Dir: ${directionCode}`, x, y - 5);
+                    ctx.fillText('enemy spotted', x, y - 5);
                 }
             });
 
-            labelBox.textContent = directionCode ? `${directionCode}` : 'No relevant object detected';
+            labelBox.textContent = personDetected ? 'enemy spotted' : 'No enemy';
 
+            // Send '1' to WebViewer only when person is detected
             if (window.AppInventor) {
-                window.AppInventor.setWebViewString(directionCode.toString());
+                window.AppInventor.setWebViewString(personDetected ? '1' : '0');
             }
 
             await tf.nextFrame();
